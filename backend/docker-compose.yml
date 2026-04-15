@@ -1,0 +1,60 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: har_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-har_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-change_me}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB_NAME:-har_backend}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --username \"$$MONGO_INITDB_ROOT_USERNAME\" --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval \"quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: har_api
+    restart: unless-stopped
+    environment:
+      APP_NAME: ${APP_NAME:-HAR Backend}
+      API_V1_PREFIX: ${API_V1_PREFIX:-}
+      DEBUG: ${DEBUG:-true}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://har_admin:change_me@mongo:27017/?authSource=admin}
+      MONGODB_DB_NAME: ${MONGODB_DB_NAME:-har_backend}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-replace_this_with_a_strong_secret_key_at_least_32_chars}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
+      CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:8081","http://127.0.0.1:8081","http://localhost:19006","http://127.0.0.1:19006","http://localhost:3000","http://127.0.0.1:3000"]}'
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mongo_data:
