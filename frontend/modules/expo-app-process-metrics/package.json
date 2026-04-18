@@ -1,0 +1,11 @@
+{
+  "name": "expo-app-process-metrics",
+  "version": "1.0.0",
+  "description": "Local Expo module for Android process-level CPU metrics",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "private": true,
+  "peerDependencies": {
+    "expo": "*"
+  }
+}
